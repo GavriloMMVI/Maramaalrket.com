@@ -1,0 +1,2073 @@
+<html lang="en" class="h-full bg-slate-950 text-slate-100 antialiased">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MaraMarket - Next.js Enterprise Full-Stack Architecture & Platform</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b', 950: '#022c22',
+                        },
+                        mpesa: {
+                            500: '#00A859', 600: '#008746',
+                        },
+                        surface: {
+                            800: '#1e293b', 850: '#172033', 900: '#0f172a', 950: '#0b0f19',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        .code-preview {
+            background: #090d16;
+            border: 1px solid #1e293b;
+        }
+
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-pulse-subtle { animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-brand-500 selection:text-white">
+
+    <!-- Top Global Status & Environment Banner -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo & Stack Badge -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
+                        <i data-lucide="store" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-lg tracking-tight text-white">MaraMarket</span>
+                            <span class="px-2 py-0.5 text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800/50 rounded-full flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Production Stack
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400 hidden sm:block">Next.js 14 App Router • PostgreSQL • Prisma • M-Pesa Daraja</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="flex items-center gap-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/60 text-xs sm:text-sm">
+                    <button onclick="switchView('app')" id="tab-app" class="px-3 py-1.5 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm flex items-center gap-1.5">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i> <span class="hidden md:inline">Live App</span>
+                    </button>
+                    <button onclick="switchView('admin')" id="tab-admin" class="px-3 py-1.5 rounded-lg font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-amber-400"></i> <span>Admin Portal</span>
+                        <span id="admin-badge-count" class="bg-amber-500/20 text-amber-300 px-1.5 py-0.2 text-[10px] rounded-full border border-amber-500/30">3</span>
+                    </button>
+                    <button onclick="switchView('code')" id="tab-code" class="px-3 py-1.5 rounded-lg font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 flex items-center gap-1.5">
+                        <i data-lucide="code-2" class="w-4 h-4"></i> <span class="hidden md:inline">Architecture & Code</span>
+                    </button>
+                    <button onclick="switchView('deploy')" id="tab-deploy" class="px-3 py-1.5 rounded-lg font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 flex items-center gap-1.5">
+                        <i data-lucide="rocket" class="w-4 h-4 text-cyan-400"></i> <span class="hidden md:inline">DevOps & Setup</span>
+                    </button>
+                </nav>
+
+                <!-- Auth State & Role Switcher Simulator -->
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <button id="user-menu-btn" onclick="toggleUserRoleDropdown()" class="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-xs">
+                            <div id="user-avatar" class="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white text-[10px]"> AD </div>
+                            <div class="text-left hidden sm:block">
+                                <p id="user-display-name" class="font-semibold text-slate-200 leading-tight">Admin (Owner)</p>
+                                <p id="user-role-badge" class="text-[10px] text-amber-400 font-mono">ROLE: ADMIN</p>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                        </button>
+
+                        <!-- Role switch popup -->
+                        <div id="role-dropdown" class="hidden absolute right-0 mt-2 w-64 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-2 z-50 text-xs">
+                            <div class="px-3 py-2 border-b border-slate-800 text-[11px] text-slate-400 font-medium">
+                                Simulated Auth Sessions (NextAuth.js)
+                            </div>
+                            <div class="mt-1 space-y-1">
+                                <button onclick="setUserRole('ADMIN')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 flex items-center justify-between text-slate-200">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                                        <div>
+                                            <p class="font-semibold text-amber-400">Super Admin</p>
+                                            <p class="text-[10px] text-slate-400">admin@maramarket.co.ke</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] bg-amber-950/80 text-amber-300 border border-amber-800 px-1.5 py-0.5 rounded">Full RBAC</span>
+                                </button>
+                                <button onclick="setUserRole('SELLER')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 flex items-center justify-between text-slate-200">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                        <div>
+                                            <p class="font-semibold text-emerald-400">Verified Seller (Student)</p>
+                                            <p class="text-[10px] text-slate-400">kelvin.k@mmarau.ac.ke</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded">User</span>
+                                </button>
+                                <button onclick="setUserRole('GUEST')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 flex items-center justify-between text-slate-200">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                                        <div>
+                                            <p class="font-semibold text-slate-300">Unauthenticated Guest</p>
+                                            <p class="text-[10px] text-slate-400">Public Read-only</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Guest</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dynamic Application Container -->
+    <main class="flex-1 flex flex-col">
+
+        <!-- ====================================================================== -->
+        <!-- VIEW 1: LIVE MARAMARKET APPLICATION (MARKETPLACE + HOUSING + SERVICES)   -->
+        <!-- ====================================================================== -->
+        <section id="view-app" class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            <!-- Campus Hero & Quick Action Bar -->
+            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-950 via-slate-900 to-slate-900 border border-brand-800/40 p-6 md:p-8 shadow-2xl">
+                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                    <div class="max-w-2xl">
+                        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-brand-900/60 border border-brand-700/50 text-brand-300 text-xs font-semibold mb-3">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Maasai Mara University & Surrounding Hostels
+                        </div>
+                        <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
+                            The Secure Campus Marketplace, Housing & Services Hub
+                        </h1>
+                        <p class="text-slate-300 text-sm sm:text-base mt-2">
+                            Buy & sell electronics, rent off-campus bedsitters, order printing or tutoring services. Backed by PostgreSQL Prisma ACID transactions and M-Pesa Daraja STK Push.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button onclick="openNewListingModal()" class="px-5 py-3 rounded-xl bg-gradient-to-r from-brand-500 to-emerald-600 hover:from-brand-600 hover:to-emerald-700 text-white font-semibold text-sm shadow-lg shadow-brand-500/25 flex items-center gap-2 transition-all transform active:scale-95">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Post a Listing
+                        </button>
+                        <button onclick="openMyListingsModal()" class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium text-sm flex items-center gap-2 transition-all">
+                            <i data-lucide="package" class="w-4 h-4 text-brand-400"></i> My Listings (<span id="user-listing-count">2</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Database Search & Live Filters -->
+                <div class="mt-6 pt-6 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    <div class="relative lg:col-span-2">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400"></i>
+                        <input type="text" id="filter-search" oninput="applyFilters()" placeholder="Search laptops, single rooms, tutoring, books..." class="w-full pl-10 pr-4 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-brand-500 text-slate-100 placeholder-slate-500" />
+                    </div>
+                    <div>
+                        <select id="filter-type" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-brand-500 text-slate-200">
+                            <option value="ALL">All Categories</option>
+                            <option value="MARKETPLACE">📦 Marketplace (Items)</option>
+                            <option value="HOUSING">🏠 Housing & Hostels</option>
+                            <option value="SERVICES">🛠️ Campus Services</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select id="filter-sort" onchange="applyFilters()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-brand-500 text-slate-200">
+                            <option value="featured">🔥 Featured & Boosted</option>
+                            <option value="newest">🕒 Newest First</option>
+                            <option value="price-asc">💵 Price: Low to High</option>
+                            <option value="price-desc">💰 Price: High to Low</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none bg-slate-800/80 px-3 py-2.5 rounded-xl border border-slate-700/80 w-full justify-center hover:bg-slate-800">
+                            <input type="checkbox" id="filter-verified-only" onchange="applyFilters()" class="rounded border-slate-700 text-brand-600 focus:ring-brand-500">
+                            <span>Verified Students Only</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Category Pill Counter -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 overflow-x-auto pb-2 text-xs">
+                    <button onclick="setCategoryFilter('ALL')" id="pill-ALL" class="px-3 py-1.5 rounded-lg bg-brand-600 text-white font-medium">All Listings (<span id="count-all">6</span>)</button>
+                    <button onclick="setCategoryFilter('MARKETPLACE')" id="pill-MARKETPLACE" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium">Marketplace (<span id="count-marketplace">3</span>)</button>
+                    <button onclick="setCategoryFilter('HOUSING')" id="pill-HOUSING" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium">Student Housing (<span id="count-housing">2</span>)</button>
+                    <button onclick="setCategoryFilter('SERVICES')" id="pill-SERVICES" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium">Services (<span id="count-services">1</span>)</button>
+                </div>
+                <span class="text-xs text-slate-400 font-mono hidden md:block">Prisma ORM • Server Filter Simulated</span>
+            </div>
+
+            <!-- Listings Grid -->
+            <div id="listings-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Injected via JavaScript -->
+            </div>
+        </section>
+
+        <!-- ====================================================================== -->
+        <!-- VIEW 2: SERVER-ENFORCED SECURE ADMIN DASHBOARD (/admin)                -->
+        <!-- ====================================================================== -->
+        <section id="view-admin" class="hidden flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            <!-- Security & Server-Side RBAC Guard Banner -->
+            <div id="admin-access-warning" class="hidden p-4 rounded-xl bg-red-950/80 border border-red-800 text-red-200 text-sm flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="shield-alert" class="w-6 h-6 text-red-400 flex-shrink-0"></i>
+                    <div>
+                        <p class="font-bold text-red-300">403 Forbidden: Server-Side Next.js Middleware Guard Active</p>
+                        <p class="text-xs text-red-300/80">You are currently logged in as a normal user/guest. In production, Next.js Middleware redirects non-admins before route rendering. Switch to Super Admin role above to test.</p>
+                    </div>
+                </div>
+                <button onclick="setUserRole('ADMIN')" class="px-3 py-1.5 rounded-lg bg-red-800 hover:bg-red-700 text-xs font-semibold text-white whitespace-nowrap"> Switch to Admin Role </button>
+            </div>
+
+            <div id="admin-content-wrapper" class="space-y-6">
+                <!-- Admin Header -->
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-8 -top-8 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl"></div>
+                    <div>
+                        <div class="flex items-center gap-2 text-xs font-mono text-amber-400 font-semibold mb-1">
+                            <i data-lucide="shield" class="w-4 h-4"></i> RESTRICTED SERVER AREA: /admin/dashboard
+                        </div>
+                        <h2 class="text-2xl font-bold text-white tracking-tight">MaraMarket Control Center</h2>
+                        <p class="text-sm text-slate-400">Authenticated via Server Action with Prisma `Role.ADMIN` session validation.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="seedDatabaseDemo()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-xs rounded-xl border border-slate-700 font-medium text-slate-200 flex items-center gap-1.5">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Reset & Seed Mock DB
+                        </button>
+                        <div class="px-3 py-2 bg-amber-950/60 border border-amber-800/60 rounded-xl text-amber-300 text-xs font-mono flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span> SSL/TLS • Neon DB Connected
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Metrics KPI Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                        <div class="flex items-center justify-between text-slate-400 text-xs">
+                            <span>Total Platform GMV</span> <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+                        </div>
+                        <p id="kpi-gmv" class="text-2xl font-bold text-white mt-2 font-mono">KES 184,500</p>
+                        <p class="text-[11px] text-emerald-400 mt-1 flex items-center gap-1"><i data-lucide="arrow-up-right" class="w-3 h-3"></i> +28.4% this week</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                        <div class="flex items-center justify-between text-slate-400 text-xs">
+                            <span>Active Listings</span> <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
+                        </div>
+                        <p id="kpi-listings" class="text-2xl font-bold text-white mt-2 font-mono">6</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Across 3 categories</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                        <div class="flex items-center justify-between text-slate-400 text-xs">
+                            <span>Pending Moderation</span> <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+                        </div>
+                        <p id="kpi-pending" class="text-2xl font-bold text-amber-400 mt-2 font-mono">2</p>
+                        <p class="text-[11px] text-amber-400/80 mt-1">Requires admin approval</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                        <div class="flex items-center justify-between text-slate-400 text-xs">
+                            <span>Open User Reports</span> <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i>
+                        </div>
+                        <p id="kpi-reports" class="text-2xl font-bold text-red-400 mt-2 font-mono">1</p>
+                        <p class="text-[11px] text-red-400/80 mt-1">1 potential scam flag</p>
+                    </div>
+                </div>
+
+                <!-- Admin Tabs -->
+                <div class="border-b border-slate-800 flex items-center gap-4 text-xs font-medium">
+                    <button onclick="switchAdminSubTab('moderation')" id="adm-tab-moderation" class="pb-3 text-brand-400 border-b-2 border-brand-500 flex items-center gap-2">
+                        <i data-lucide="check-square" class="w-4 h-4"></i> Listings Moderation Queue (<span id="adm-mod-count">2</span>)
+                    </button>
+                    <button onclick="switchAdminSubTab('reports')" id="adm-tab-reports" class="pb-3 text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                        <i data-lucide="flag" class="w-4 h-4 text-red-400"></i> Reported Items & Users (<span id="adm-rep-count">1</span>)
+                    </button>
+                    <button onclick="switchAdminSubTab('users')" id="adm-tab-users" class="pb-3 text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                        <i data-lucide="users" class="w-4 h-4"></i> User RBAC Management
+                    </button>
+                    <button onclick="switchAdminSubTab('mpesa')" id="adm-tab-mpesa" class="pb-3 text-slate-400 hover:text-slate-200 flex items-center gap-2">
+                        <i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i> M-Pesa Daraja Transactions
+                    </button>
+                </div>
+
+                <!-- Admin Tab 1: Moderation Queue -->
+                <div id="adm-sec-moderation" class="space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                        <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between text-xs">
+                            <span class="font-semibold text-slate-200">Listing Approval Pipeline (Prisma Status: PENDING / REJECTED / APPROVED)</span>
+                            <span class="text-slate-400">Action triggers immediate database UPDATE</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-950/60 text-slate-400 font-mono uppercase text-[10px] border-b border-slate-800">
+                                    <tr>
+                                        <th class="p-3">Listing Details</th>
+                                        <th class="p-3">Author / Phone</th>
+                                        <th class="p-3">Category</th>
+                                        <th class="p-3">Price</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3 text-right">Moderation Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-moderation-tbody" class="divide-y divide-slate-800 text-slate-300"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Tab 2: Reports -->
+                <div id="adm-sec-reports" class="hidden space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                        <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between text-xs">
+                            <span class="font-semibold text-red-300">Community Safety & Anti-Fraud Center</span>
+                            <span class="text-slate-400">Reports filed by campus students</span>
+                        </div>
+                        <div class="divide-y divide-slate-800" id="admin-reports-list"></div>
+                    </div>
+                </div>
+
+                <!-- Admin Tab 3: Users RBAC -->
+                <div id="adm-sec-users" class="hidden space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                        <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between text-xs">
+                            <span class="font-semibold text-slate-200">User Registry & Role Authority</span>
+                            <span class="text-amber-400 font-mono text-[11px]">Strict Server-Enforced RBAC</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-950/60 text-slate-400 font-mono uppercase text-[10px] border-b border-slate-800">
+                                    <tr>
+                                        <th class="p-3">User</th>
+                                        <th class="p-3">Role</th>
+                                        <th class="p-3">Verified Student</th>
+                                        <th class="p-3">Listings</th>
+                                        <th class="p-3">Created</th>
+                                        <th class="p-3 text-right">Admin Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-users-tbody" class="divide-y divide-slate-800 text-slate-300"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Tab 4: M-Pesa Daraja Transactions -->
+                <div id="adm-sec-mpesa" class="hidden space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                        <div class="px-4 py-3 bg-slate-800/50 border-b border-slate-800 flex items-center justify-between text-xs">
+                            <span class="font-semibold text-emerald-400 flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4"></i> Daraja 2.0 STK Push Audit Trail (Prisma `Transaction` Table) </span>
+                            <span class="text-slate-400 font-mono text-[11px]">Webhook Endpoint: /api/mpesa/callback</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-950/60 text-slate-400 font-mono uppercase text-[10px] border-b border-slate-800">
+                                    <tr>
+                                        <th class="p-3">CheckoutRequestID</th>
+                                        <th class="p-3">User & Phone</th>
+                                        <th class="p-3">Target Item / Boost</th>
+                                        <th class="p-3">Amount</th>
+                                        <th class="p-3">M-Pesa Receipt</th>
+                                        <th class="p-3">Status</th>
+                                        <th class="p-3">Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-mpesa-tbody" class="divide-y divide-slate-800 text-slate-300 font-mono text-[11px]"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================================== -->
+        <!-- VIEW 3: FULL ARCHITECTURE & PRODUCTION CODE VIEWER                       -->
+        <!-- ====================================================================== -->
+        <section id="view-code" class="hidden flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                        <i data-lucide="code-2" class="w-6 h-6 text-brand-400"></i> Production Codebase & Architecture
+                    </h2>
+                    <p class="text-sm text-slate-400">Complete Next.js 14 App Router, PostgreSQL Schema with Prisma, and M-Pesa Integration.</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="px-2.5 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-slate-300">Next.js 14.2+</span>
+                    <span class="px-2.5 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-cyan-300">Prisma 5.15+</span>
+                    <span class="px-2.5 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-emerald-300">Safaricom Daraja 2.0</span>
+                </div>
+            </div>
+
+            <!-- Architecture Interactive File Explorer & Code Viewer -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Left: File Tree Directory -->
+                <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-4 text-xs font-mono max-h-[600px] overflow-y-auto">
+                    <div class="text-[11px] font-bold uppercase text-slate-400 tracking-wider mb-3 px-2 flex items-center justify-between">
+                        <span>Project Structure</span>
+                        <i data-lucide="folder-tree" class="w-4 h-4 text-slate-500"></i>
+                    </div>
+                    <div class="space-y-1 text-slate-300" id="file-explorer">
+                        <!-- Dynamically rendered from CODE_REPOSITORY -->
+                    </div>
+                </div>
+
+                <!-- Right: Active Code File Viewer with Syntax Styling -->
+                <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+                    <div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2 font-mono text-xs text-brand-400" id="code-viewer-filename">
+                            <i data-lucide="file-code" class="w-4 h-4"></i> package.json
+                        </div>
+                        <button onclick="copyActiveCode()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] rounded text-slate-300 flex items-center gap-1.5 transition-colors">
+                            <i data-lucide="copy" class="w-3 h-3"></i> <span id="copy-btn-text">Copy Code</span>
+                        </button>
+                    </div>
+                    <pre class="p-4 overflow-x-auto text-xs font-mono leading-relaxed text-slate-300 code-preview min-h-[500px] max-h-[600px]"><code id="code-content"></code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================================================================== -->
+        <!-- VIEW 4: DEVOPS & VERCEL / POSTGRES / CLOUDINARY SETUP GUIDE             -->
+        <!-- ====================================================================== -->
+        <section id="view-deploy" class="hidden flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            <div class="bg-gradient-to-r from-slate-900 to-brand-950/40 p-6 md:p-8 rounded-2xl border border-slate-800">
+                <h2 class="text-2xl font-bold text-white tracking-tight">Complete Full-Stack Deployment & Runbook</h2>
+                <p class="text-slate-300 text-sm mt-1">
+                    Step-by-step instructions to take this architecture into full live production on Vercel + Neon/Supabase PostgreSQL + Safaricom Daraja + Cloudinary.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Step 1: Database & Prisma -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-950 border border-cyan-800 flex items-center justify-center text-cyan-400 font-bold"> 1 </div>
+                    <h3 class="font-bold text-white text-base">PostgreSQL & Prisma Migration</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed"> Provision a managed PostgreSQL instance on Neon.tech or Supabase. Then push the schema and execute the secure admin seed: </p>
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-mono text-emerald-400 space-y-1">
+                        <p class="text-slate-500"># Install dependencies</p>
+                        <p>pnpm install</p>
+                        <p class="text-slate-500 mt-2"># Run migrations to Neon/Supabase</p>
+                        <p>pnpx prisma migrate dev --name init</p>
+                        <p class="text-slate-500 mt-2"># Seed initial admin user securely</p>
+                        <p>pnpx prisma db seed</p>
+                    </div>
+                </div>
+
+                <!-- Step 2: Environment Variables -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                    <div class="w-10 h-10 rounded-xl bg-amber-950 border border-amber-800 flex items-center justify-center text-amber-400 font-bold"> 2 </div>
+                    <h3 class="font-bold text-white text-base">Configure Production .env</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed"> Populate environment variables in Vercel Project Settings. Note that admin credentials are never bundled into client JS: </p>
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-mono text-amber-300 space-y-1">
+                        <p>DATABASE_URL="postgres://..."</p>
+                        <p>NEXTAUTH_SECRET="32-byte-hex..."</p>
+                        <p>ADMIN_INIT_EMAIL="admin@maramarket.co.ke"</p>
+                        <p>ADMIN_INIT_PASSWORD="StrongSecurePassword!"</p>
+                        <p>MPESA_CONSUMER_KEY="..."</p>
+                        <p>MPESA_PASSKEY="..."</p>
+                    </div>
+                </div>
+
+                <!-- Step 3: Vercel Deploy & Webhooks -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                    <div class="w-10 h-10 rounded-xl bg-purple-950 border border-purple-800 flex items-center justify-center text-purple-400 font-bold"> 3 </div>
+                    <h3 class="font-bold text-white text-base">Vercel Build & Daraja Webhook</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed"> Deploy your GitHub repository directly to Vercel and register the Daraja STK Push callback URL: </p>
+                    <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-mono text-purple-300 space-y-1">
+                        <p class="text-slate-500"># Build verification</p>
+                        <p>pnpm run build</p>
+                        <p class="text-slate-500 mt-2"># Webhook Target URL</p>
+                        <p>https://maramarket.vercel.app/api/mpesa/callback</p>
+                        <p class="text-slate-500 mt-2"># Cloudinary Upload Preset</p>
+                        <p>CLOUDINARY_PRESET="maramarket_unsigned"</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed README / Architecture Specification Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="book-open" class="w-5 h-5 text-brand-400"></i> Production Architecture Checklist & Security Guarantees
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+                    <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                        <p class="font-bold text-brand-400 flex items-center gap-1.5"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Zero Client-Side Admin Elevation</p>
+                        <p class="text-slate-400"> Roles are stored solely in the PostgreSQL database and signed into HttpOnly session JWTs. Next.js middleware and Server Actions verify `token.role === 'ADMIN'` on every single request. No client-side JavaScript manipulation can bypass the database filter. </p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                        <p class="font-bold text-emerald-400 flex items-center gap-1.5"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Safaricom Daraja 2.0 Idempotency</p>
+                        <p class="text-slate-400"> The STK Push webhook verifies `MerchantRequestID` & `CheckoutRequestID` against existing transaction records, executing an ACID Prisma transaction to boost the listing and log the transaction receipt instantly. </p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                        <p class="font-bold text-cyan-400 flex items-center gap-1.5"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Direct Cloudinary Storage</p>
+                        <p class="text-slate-400"> Images are processed with signed / verified uploads directly to Cloudinary CDN, storing only optimized HTTPS asset URLs and public IDs in the PostgreSQL `Listing.images` array. </p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                        <p class="font-bold text-amber-400 flex items-center gap-1.5"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Moderation & Anti-Spam Pipeline</p>
+                        <p class="text-slate-400"> New listings default to `PENDING` or `APPROVED` based on seller student verification score. Campus members can flag suspicious listings, alerting the admin with direct 1-click ban and takedown capabilities. </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ====================================================================== -->
+    <!-- MODALS SECTION: CREATE LISTING, M-PESA PAYMENT, REPORT, MY LISTINGS      -->
+    <!-- ====================================================================== -->
+
+    <!-- Modal 1: Create New Listing -->
+    <div id="modal-create-listing" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-brand-400"></i>
+                    <h3 class="font-bold text-white text-base">Create Database Listing</h3>
+                </div>
+                <button onclick="closeModal('modal-create-listing')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form onsubmit="handleCreateListing(event)" class="p-6 space-y-4 text-xs">
+                <div>
+                    <label class="block text-slate-300 font-medium mb-1">Listing Title *</label>
+                    <input type="text" id="new-title" required placeholder="e.g. HP Pavilion Core i7 16GB RAM or Bedsitter near Gate B" class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:border-brand-500 focus:outline-none text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-300 font-medium mb-1">Category *</label>
+                        <select id="new-category" required class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:border-brand-500 focus:outline-none text-white">
+                            <option value="MARKETPLACE">Marketplace (Electronics/Items)</option>
+                            <option value="HOUSING">Student Housing & Hostels</option>
+                            <option value="SERVICES">Campus Services (Printing/Tutoring)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-medium mb-1">Price (KES) *</label>
+                        <input type="number" id="new-price" required placeholder="4500" class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:border-brand-500 focus:outline-none text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-medium mb-1">Campus Location / Landmark *</label>
+                    <input type="text" id="new-location" required placeholder="e.g. Total Petrol Station / Behind Science Complex" class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:border-brand-500 focus:outline-none text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-medium mb-1">Detailed Description *</label>
+                    <textarea id="new-desc" rows="3" required placeholder="Provide condition, specs, included accessories, or deposit details..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:border-brand-500 focus:outline-none text-white"></textarea>
+                </div>
+
+                <!-- Cloudinary Simulation Upload -->
+                <div>
+                    <label class="block text-slate-300 font-medium mb-1">Product Images (Cloudinary CDN Simulated)</label>
+                    <div class="border-2 border-dashed border-slate-700 hover:border-brand-500/60 rounded-xl p-4 text-center cursor-pointer bg-slate-950/50" onclick="simulateImageSelect()">
+                        <i data-lucide="cloud-upload" class="w-6 h-6 text-brand-400 mx-auto mb-1"></i>
+                        <p class="text-slate-300 font-medium text-[11px]" id="upload-status-text">Click to attach photo (Auto-uploaded to Cloudinary)</p>
+                        <p class="text-slate-500 text-[10px]">JPG, PNG or WEBP up to 5MB</p>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-3">
+                    <button type="button" onclick="closeModal('modal-create-listing')" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold flex items-center gap-1.5">
+                        <i data-lucide="check" class="w-4 h-4"></i> Save to Database
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: M-Pesa STK Push Simulation (Daraja 2.0) -->
+    <div id="modal-mpesa-boost" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-emerald-600/40 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-emerald-950 to-slate-900 border-b border-emerald-800/50 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-mpesa-500 flex items-center justify-center text-white font-black text-xs"> M </div>
+                    <div>
+                        <h3 class="font-bold text-white text-sm">M-Pesa Express (STK Push)</h3>
+                        <p class="text-[10px] text-emerald-300">Boost Listing • 7-Day Top Placement</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-mpesa-boost')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-4 text-xs">
+                <div class="p-3.5 bg-slate-950 rounded-xl border border-slate-800">
+                    <div class="flex justify-between items-center text-slate-400">
+                        <span>Boost Package</span> <span class="text-emerald-400 font-bold">Featured Spotlight</span>
+                    </div>
+                    <div class="flex justify-between items-center text-slate-400 mt-1">
+                        <span>Fee</span> <span class="text-white font-mono font-bold text-sm">KES 100.00</span>
+                    </div>
+                    <div class="flex justify-between items-center text-slate-400 mt-1">
+                        <span>Item</span> <span id="mpesa-target-title" class="text-slate-200 truncate max-w-[200px]">Item Title</span>
+                    </div>
+                </div>
+
+                <div id="mpesa-input-stage">
+                    <label class="block text-slate-300 font-medium mb-1">M-Pesa Registered Phone Number</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-slate-400 font-mono text-xs">+254</span>
+                        <input type="tel" id="mpesa-phone" value="712345678" maxlength="9" placeholder="712345678" class="w-full pl-14 pr-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:border-emerald-500 focus:outline-none text-white font-mono text-sm">
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-1">A prompt will be sent to your phone asking for your M-Pesa PIN.</p>
+                    <button onclick="triggerDarajaSTKPush()" class="w-full mt-4 py-3 bg-gradient-to-r from-mpesa-500 to-emerald-600 hover:from-mpesa-600 hover:to-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-950 flex items-center justify-center gap-2 text-sm">
+                        <i data-lucide="smartphone" class="w-4 h-4"></i> Send STK Push (KES 100)
+                    </button>
+                </div>
+
+                <!-- Simulation Processing Screen -->
+                <div id="mpesa-processing-stage" class="hidden text-center py-6 space-y-3">
+                    <div class="w-12 h-12 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin mx-auto"></div>
+                    <p class="font-bold text-white text-sm">Prompt Sent to Handset!</p>
+                    <p class="text-[11px] text-slate-400 font-mono">Check phone <span id="mpesa-phone-display" class="text-emerald-400 font-bold"></span> and enter PIN...</p>
+                    <div class="p-2.5 bg-emerald-950/40 border border-emerald-800/60 rounded-xl text-[10px] text-emerald-300 font-mono">
+                        Simulating Webhook Response (/api/mpesa/callback)...
+                    </div>
+                </div>
+
+                <!-- Success Screen -->
+                <div id="mpesa-success-stage" class="hidden text-center py-4 space-y-3">
+                    <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/50">
+                        <i data-lucide="check" class="w-6 h-6"></i>
+                    </div>
+                    <p class="font-bold text-white text-base">Payment Confirmed!</p>
+                    <p class="text-[11px] text-slate-400">M-Pesa Receipt: <span id="mpesa-receipt-code" class="text-emerald-400 font-mono font-bold">QKD8291KZP</span></p>
+                    <p class="text-xs text-slate-300">Listing has been boosted to the top of MaraMarket with the Featured badge!</p>
+                    <button onclick="closeModal('modal-mpesa-boost')" class="w-full mt-2 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl text-xs">
+                        Close & Refresh Marketplace
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Report Listing / Safety -->
+    <div id="modal-report" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-red-800/50 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 bg-red-950/40 border-b border-red-800/40 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="flag" class="w-5 h-5 text-red-400"></i>
+                    <h3 class="font-bold text-white text-base">Report Listing to Admin</h3>
+                </div>
+                <button onclick="closeModal('modal-report')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form onsubmit="handleSubmitReport(event)" class="p-6 space-y-4 text-xs">
+                <p class="text-slate-300">Reporting item: <strong id="report-item-title" class="text-white font-semibold"></strong></p>
+                <div>
+                    <label class="block text-slate-300 font-medium mb-1">Reason for Report *</label>
+                    <select id="report-reason" required class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl focus:border-red-500 focus:outline-none text-white">
+                        <option value="SCAM">Suspected Scam or False Deposit Request</option>
+                        <option value="FAKE_ITEM">Counterfeit or Stolen Item</option>
+                        <option value="INAPPROPRIATE">Inappropriate / Prohibited Content</option>
+                        <option value="MISLEADING_HOUSING">Fake Hostel Room Photos or Wrong Pricing</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-slate-300 font-medium mb-1">Details & Evidence *</label>
+                    <textarea id="report-details" required rows="3" placeholder="Explain what happened or why this listing violates campus safety..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:border-red-500 focus:outline-none text-white"></textarea>
+                </div>
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeModal('modal-report')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-medium">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold flex items-center gap-1.5">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> Submit to Admin Queue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 4: User Dashboard / My Listings -->
+    <div id="modal-my-listings" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="package" class="w-5 h-5 text-brand-400"></i>
+                    <div>
+                        <h3 class="font-bold text-white text-base">My Listings Management</h3>
+                        <p class="text-[10px] text-slate-400">PostgreSQL CRUD Operations on Authenticated User Items</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-my-listings')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-3 flex-1" id="my-listings-list">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ====================================================================== -->
+    <!-- JAVASCRIPT STATE ENGINE & INTERACTION LOGIC                            -->
+    <!-- ====================================================================== -->
+    <script>
+        // State Store simulating PostgreSQL with Prisma
+        const STATE = {
+            currentUser: {
+                id: "usr_admin_01", name: "Admin Kelvin", email: "admin@maramarket.co.ke",
+                role: "ADMIN", isVerifiedStudent: true, phone: "+254712345678"
+            },
+            categories: ["MARKETPLACE", "HOUSING", "SERVICES"],
+            listings: [
+                { id: "lst_001", title: "HP EliteBook 840 G5 (Core i5 8th Gen, 16GB, 512GB SSD)", description: "Mint condition laptop, suitable for software engineering & data courses. Battery lasts 5+ hours. Comes with original charger.", price: 28500, category: "MARKETPLACE", location: "Near Science Complex / Gate A", status: "APPROVED", isFeatured: true, images: ["https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600&auto=format&fit=crop&q=60"], userId: "usr_student_02", userName: "Brian Ochieng", userVerified: true, phone: "+254798112233", createdAt: "2025-05-10T10:30:00Z" },
+                { id: "lst_002", title: "Modern Spacious Bedsitter (Tiled, Instant Shower, WiFi)", description: "Located 300m from Maasai Mara University main gate. Secure compound with 24/7 security guard, clean borehole water, and prepaid electricity meter.", price: 5500, category: "HOUSING", location: "Maasai Mara Hostels Zone B", status: "APPROVED", isFeatured: true, images: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&auto=format&fit=crop&q=60"], userId: "usr_student_03", userName: "Cynthia Njeri", userVerified: true, phone: "+254711889900", createdAt: "2025-05-11T12:00:00Z" },
+                { id: "lst_003", title: "Calculus, Linear Algebra & Python Tutoring Services", description: "Offering 1-on-1 and small group revision sessions for 1st & 2nd year students. Past paper breakdown and exam prep included.", price: 400, category: "SERVICES", location: "Campus Library / Online Google Meet", status: "APPROVED", isFeatured: false, images: ["https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600&auto=format&fit=crop&q=60"], userId: "usr_student_02", userName: "Brian Ochieng", userVerified: true, phone: "+254798112233", createdAt: "2025-05-12T08:15:00Z" },
+                { id: "lst_004", title: "Dell 24-inch IPS Full HD Monitor (HDMI + DisplayPort)", description: "Great for coding or extra study screen. 75Hz refresh rate with eye-saver mode. Box and cables included.", price: 11000, category: "MARKETPLACE", location: "Town Center Hostel", status: "PENDING", isFeatured: false, images: ["https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=600&auto=format&fit=crop&q=60"], userId: "usr_admin_01", userName: "Admin Kelvin", userVerified: true, phone: "+254712345678", createdAt: "2025-05-12T14:45:00Z" },
+                { id: "lst_005", title: "Single Room for Rent (Water Included)", description: "Quiet area, ideal for final year research projects. Shared amenities, close to shopping center.", price: 3200, category: "HOUSING", location: "Narok Town / Maasai Mara Perimeter", status: "PENDING", isFeatured: false, images: ["https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=600&auto=format&fit=crop&q=60"], userId: "usr_student_04", userName: "Faith Chebet", userVerified: false, phone: "+254722003344", createdAt: "2025-05-12T16:20:00Z" },
+                { id: "lst_006", title: "Scientific Calculator Casio fx-991EX ClassWiz", description: "Original Casio calculator with natural textbook display. Works perfectly for all engineering calculations.", price: 2400, category: "MARKETPLACE", location: "Mess Hall Plaza", status: "APPROVED", isFeatured: false, images: ["https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&auto=format&fit=crop&q=60"], userId: "usr_admin_01", userName: "Admin Kelvin", userVerified: true, phone: "+254712345678", createdAt: "2025-05-09T09:00:00Z" }
+            ],
+            reports: [
+                { id: "rep_001", listingId: "lst_005", listingTitle: "Single Room for Rent (Water Included)", reporterName: "Emmanuel Kiprop", reason: "SCAM", details: "Landlord asked for KES 2,000 reservation fee via M-Pesa before viewing the room. When visited, the room belongs to someone else.", status: "OPEN", createdAt: "2025-05-12T17:00:00Z" }
+            ],
+            mpesaTransactions: [
+                { id: "tx_001", checkoutRequestId: "ws_CO_12052025143000987", phone: "+254798112233", userName: "Brian Ochieng", itemTitle: "HP EliteBook 840 G5", amount: 100, mpesaReceipt: "QKD8291KZP", status: "COMPLETED", createdAt: "2025-05-10T10:45:00Z" },
+                { id: "tx_002", checkoutRequestId: "ws_CO_11052025121000452", phone: "+254711889900", userName: "Cynthia Njeri", itemTitle: "Modern Spacious Bedsitter", amount: 100, mpesaReceipt: "QKC4910LXQ", status: "COMPLETED", createdAt: "2025-05-11T12:15:00Z" }
+            ],
+            users: [
+                { id: "usr_admin_01", name: "Admin Kelvin", email: "admin@maramarket.co.ke", role: "ADMIN", isVerified: true, createdAt: "2025-01-01" },
+                { id: "usr_student_02", name: "Brian Ochieng", email: "brian.o@mmarau.ac.ke", role: "USER", isVerified: true, createdAt: "2025-02-14" },
+                { id: "usr_student_03", name: "Cynthia Njeri", email: "cynthia.n@mmarau.ac.ke", role: "USER", isVerified: true, createdAt: "2025-03-01" },
+                { id: "usr_student_04", name: "Faith Chebet", email: "faith.c@mmarau.ac.ke", role: "USER", isVerified: false, createdAt: "2025-04-20" }
+            ],
+            activeCategoryFilter: "ALL",
+            activeTargetListingForMpesa: null,
+            activeTargetListingForReport: null
+        };
+
+        // Real full-stack file architecture embedded for viewer
+        const CODE_REPOSITORY = {
+            "package.json": {
+                content: `{
+  "name": "maramarket-production",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:migrate": "prisma migrate dev --name init",
+    "db:seed": "prisma db seed"
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.1.0",
+    "@prisma/client": "^5.15.0",
+    "axios": "^1.7.2",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.2.0",
+    "next": "14.2.4",
+    "next-auth": "^4.24.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.14.2",
+    "@types/react": "^18.3.3",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "prisma": "^5.15.0",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.4.5"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\\"module\\":\\"CommonJS\\"} prisma/seed.ts"
+  }
+}`,
+                lang: "json"
+            },
+            "prisma/schema.prisma": {
+                content: `datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum ListingCategory {
+  MARKETPLACE
+  HOUSING
+  SERVICES
+}
+
+enum ListingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SOLD
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model User {
+  id               String         @id @default(cuid())
+  name             String?
+  email            String         @unique
+  emailVerified    DateTime?
+  passwordHash     String
+  image            String?
+  role             Role           @default(USER)
+  isVerifiedStudent Boolean       @default(false)
+  phone            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  listings         Listing[]
+  reportsFiled     Report[]       @relation("ReporterRelation")
+  transactions     Transaction[]
+  auditLogs        AuditLog[]
+  @@map("users")
+}
+
+model Listing {
+  id          String          @id @default(cuid())
+  title       String
+  description String          @db.Text
+  price       Float
+  category    ListingCategory
+  location    String
+  status      ListingStatus   @default(PENDING)
+  isFeatured  Boolean         @default(false)
+  images      String[]
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reports     Report[]
+  boosts      Boost[]
+  transactions Transaction[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  @@index([category, status])
+  @@index([price])
+  @@index([isFeatured])
+  @@map("listings")
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  listingId   String
+  listing     Listing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reporterId  String
+  reporter    User         @relation("ReporterRelation", fields: [reporterId], references: [id], onDelete: Cascade)
+  reason      String
+  details     String       @db.Text
+  status      ReportStatus @default(OPEN)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  @@map("reports")
+}
+
+model Boost {
+  id          String   @id @default(cuid())
+  listingId   String
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  @@map("boosts")
+}
+
+model Transaction {
+  id                String             @id @default(cuid())
+  merchantRequestId String?
+  checkoutRequestId String             @unique
+  mpesaReceipt      String?            @unique
+  amount            Float
+  phone             String
+  status            TransactionStatus  @default(PENDING)
+  userId            String
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listingId         String?
+  listing           Listing?           @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  @@map("transactions")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metadata   Json?
+  createdAt DateTime @default(now())
+  @@map("audit_logs")
+}`,
+                lang: "prisma"
+            },
+            "prisma/seed.ts": {
+                content: `import { PrismaClient, Role } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  const adminEmail = process.env.ADMIN_INIT_EMAIL || 'admin@maramarket.co.ke';
+  const rawAdminPassword = process.env.ADMIN_INIT_PASSWORD;
+
+  if (!rawAdminPassword) {
+    throw new Error('CRITICAL SECURITY ERROR: ADMIN_INIT_PASSWORD is missing in .env');
+  }
+
+  const hashedPassword = await bcrypt.hash(rawAdminPassword, 12);
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: { role: Role.ADMIN, isVerifiedStudent: true },
+    create: {
+      email: adminEmail,
+      name: 'MaraMarket Super Admin',
+      passwordHash: hashedPassword,
+      role: Role.ADMIN,
+      isVerifiedStudent: true,
+      phone: '+254700000000'
+    }
+  });
+
+  console.log(\`✅ Secure Admin created/verified: \${admin.email} (Role: \${admin.role})\`);
+}
+
+main()
+  .catch((e) => {
+    console.error('❌ Seeding error:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });`,
+                lang: "typescript"
+            },
+            "src/middleware.ts": {
+                content: `import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
+
+export default withAuth(
+  function middleware(req) {
+    const token = req.nextauth.token;
+    const pathname = req.nextUrl.pathname;
+
+    // Strict Admin Protection: Verify role from server-signed JWT
+    if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
+      if (token?.role !== "ADMIN") {
+        return NextResponse.redirect(new URL("/unauthorized?reason=admin_required", req.url));
+      }
+    }
+    return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        if (req.nextUrl.pathname.startsWith("/dashboard") || req.nextUrl.pathname.startsWith("/admin")) {
+          return !!token;
+        }
+        return true;
+      },
+    },
+  }
+);
+
+export const config = {
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/dashboard/:path*"],
+};`,
+                lang: "typescript"
+            },
+            "src/lib/prisma.ts": {
+                content: `import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = global as unknown as { prisma: PrismaClient | undefined };
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;`,
+                lang: "typescript"
+            },
+            "src/lib/auth.ts": {
+                content: `import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+
+export const authOptions: NextAuthOptions = {
+  session: { strategy: "jwt" },
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email.toLowerCase() }
+        });
+
+        if (!user || !user.passwordHash) return null;
+
+        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
+        if (!isValid) return null;
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isVerifiedStudent: user.isVerifiedStudent
+        };
+      }
+    })
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = (user as any).role;
+        token.isVerifiedStudent = (user as any).isVerifiedStudent;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.isVerifiedStudent = token.isVerifiedStudent as boolean;
+      }
+      return session;
+    }
+  },
+  pages: { signIn: '/login' }
+};`,
+                lang: "typescript"
+            },
+            "src/app/api/listings/route.ts": {
+                content: `import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+const ListingSchema = z.object({
+  title: z.string().min(5),
+  description: z.string().min(10),
+  price: z.number().positive(),
+  category: z.enum(['MARKETPLACE', 'HOUSING', 'SERVICES']),
+  location: z.string().min(3),
+  images: z.array(z.string().url()).optional()
+});
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const category = searchParams.get('category');
+  const query = searchParams.get('q');
+  const verifiedOnly = searchParams.get('verified') === 'true';
+
+  const whereClause: any = { status: 'APPROVED' };
+
+  if (category && category !== 'ALL') whereClause.category = category;
+  if (query) {
+    whereClause.OR = [
+      { title: { contains: query, mode: 'insensitive' } },
+      { description: { contains: query, mode: 'insensitive' } },
+      { location: { contains: query, mode: 'insensitive' } }
+    ];
+  }
+  if (verifiedOnly) {
+    whereClause.user = { isVerifiedStudent: true };
+  }
+
+  const listings = await prisma.listing.findMany({
+    where: whereClause,
+    include: {
+      user: { select: { id: true, name: true, isVerifiedStudent: true, phone: true } }
+    },
+    orderBy: [
+      { isFeatured: 'desc' },
+      { createdAt: 'desc' }
+    ]
+  });
+
+  return NextResponse.json(listings);
+}
+
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const data = ListingSchema.parse(body);
+
+    const listing = await prisma.listing.create({
+      data: {
+        ...data,
+        userId: session.user.id,
+        status: session.user.isVerifiedStudent ? 'APPROVED' : 'PENDING'
+      }
+    });
+
+    return NextResponse.json(listing, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: 'Invalid listing data' }, { status: 400 });
+  }
+}`,
+                lang: "typescript"
+            },
+            "src/app/api/mpesa/stkpush/route.ts": {
+                content: `import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import axios from 'axios';
+
+export async function POST(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { listingId, phone, amount } = await req.json();
+
+    const auth = Buffer.from(
+      \`\${process.env.MPESA_CONSUMER_KEY}:\${process.env.MPESA_CONSUMER_SECRET}\`
+    ).toString('base64');
+
+    const tokenRes = await axios.get(
+      'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
+      { headers: { Authorization: \`Basic \${auth}\` } }
+    );
+
+    const accessToken = tokenRes.data.access_token;
+    const timestamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+    const password = Buffer.from(
+      \`\${process.env.MPESA_SHORTCODE}\${process.env.MPESA_PASSKEY}\${timestamp}\`
+    ).toString('base64');
+
+    const stkRes = await axios.post(
+      'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
+      {
+        BusinessShortCode: process.env.MPESA_SHORTCODE,
+        Password: password,
+        Timestamp: timestamp,
+        TransactionType: "CustomerPayBillOnline",
+        Amount: amount,
+        PartyA: phone,
+        PartyB: process.env.MPESA_SHORTCODE,
+        PhoneNumber: phone,
+        CallBackURL: \`\${process.env.NEXTAUTH_URL}/api/mpesa/callback\`,
+        AccountReference: "MaraMarket Boost",
+        TransactionDesc: \`Boost for Listing \${listingId}\`
+      },
+      { headers: { Authorization: \`Bearer \${accessToken}\` } }
+    );
+
+    await prisma.transaction.create({
+      data: {
+        checkoutRequestId: stkRes.data.CheckoutRequestID,
+        merchantRequestId: stkRes.data.MerchantRequestID,
+        amount: Number(amount),
+        phone: String(phone),
+        userId: session.user.id,
+        listingId: listingId,
+        status: 'PENDING'
+      }
+    });
+
+    return NextResponse.json({ success: true, checkoutRequestId: stkRes.data.CheckoutRequestID });
+  } catch (error: any) {
+    console.error('M-Pesa STK Push error:', error.response?.data || error);
+    return NextResponse.json({ error: 'Failed to initiate M-Pesa STK push' }, { status: 500 });
+  }
+}`,
+                lang: "typescript"
+            },
+            "src/app/api/mpesa/callback/route.ts": {
+                content: `import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+export async function POST(req: Request) {
+  try {
+    const data = await req.json();
+    const { Body } = data;
+    const stkCallback = Body?.stkCallback;
+
+    if (!stkCallback) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    const { CheckoutRequestID, ResultCode, CallbackMetadata } = stkCallback;
+
+    if (ResultCode === 0) {
+      const receiptItem = CallbackMetadata?.Item?.find((i: any) => i.Name === 'MpesaReceiptNumber');
+      const mpesaReceipt = receiptItem?.Value || 'MPESA_AUTO_' + Date.now();
+
+      await prisma.$transaction(async (tx) => {
+        const transaction = await tx.transaction.update({
+          where: { checkoutRequestId: CheckoutRequestID },
+          data: { status: 'COMPLETED', mpesaReceipt: mpesaReceipt }
+        });
+
+        if (transaction.listingId) {
+          await tx.listing.update({
+            where: { id: transaction.listingId },
+            data: { isFeatured: true }
+          });
+
+          await tx.boost.create({
+            data: {
+              listingId: transaction.listingId,
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            }
+          });
+        }
+      });
+
+      console.log(\`✅ M-Pesa Payment Confirmed: Receipt \${mpesaReceipt}\`);
+    } else {
+      await prisma.transaction.update({
+        where: { checkoutRequestId: CheckoutRequestID },
+        data: { status: 'FAILED' }
+      });
+    }
+
+    return NextResponse.json({ ResultCode: 0, ResultDesc: "Accepted" });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return NextResponse.json({ error: 'Webhook processing error' }, { status: 500 });
+  }
+}`,
+                lang: "typescript"
+            },
+            "src/app/api/admin/moderation/route.ts": {
+                content: `import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const pendingListings = await prisma.listing.findMany({
+    where: { status: 'PENDING' },
+    include: { user: true }
+  });
+  return NextResponse.json(pendingListings);
+}
+
+export async function PATCH(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { id, status } = await req.json();
+
+  const updated = await prisma.listing.update({
+    where: { id },
+    data: { status }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      action: \`LISTING_\${status}\`,
+      userId: session.user.id,
+      metadata: { listingId: id }
+    }
+  });
+
+  return NextResponse.json(updated);
+}`,
+                lang: "typescript"
+            },
+            "src/app/api/reports/route.ts": {
+                content: `import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { listingId, reason, details } = await req.json();
+
+  const report = await prisma.report.create({
+    data: {
+      listingId,
+      reporterId: session.user.id,
+      reason,
+      details
+    }
+  });
+
+  return NextResponse.json(report, { status: 201 });
+}`,
+                lang: "typescript"
+            },
+            "src/app/admin/page.tsx": {
+                content: `import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import AdminDashboard from "@/components/AdminDashboard";
+
+export default async function AdminPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || session.user.role !== "ADMIN") {
+    redirect("/unauthorized");
+  }
+
+  return <AdminDashboard user={session.user} />;
+}`,
+                lang: "typescript"
+            },
+            "src/components/AdminDashboard.tsx": {
+                content: `"use client";
+
+import { useEffect, useState } from "react";
+
+export default function AdminDashboard({ user }: { user: any }) {
+  const [pending, setPending] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/admin/moderation')
+      .then(res => res.json())
+      .then(data => setPending(data));
+  }, []);
+
+  const handleModeration = async (id: string, status: string) => {
+    await fetch('/api/admin/moderation', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status })
+    });
+    setPending(prev => prev.filter((l: any) => l.id !== id));
+  };
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
+      <p>Welcome, {user.name}. You have administrative privileges.</p>
+      
+      <div className="mt-8">
+        <h2 className="text-xl font-bold mb-4">Moderation Queue</h2>
+        <div className="space-y-4">
+          {pending.map((listing: any) => (
+            <div key={listing.id} className="p-4 border rounded-lg flex justify-between items-center">
+              <div>
+                <h3 className="font-semibold">{listing.title}</h3>
+                <p className="text-sm text-gray-500">By {listing.user.name}</p>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => handleModeration(listing.id, 'APPROVED')}
+                  className="px-4 py-2 bg-green-600 text-white rounded"
+                >
+                  Approve
+                </button>
+                <button 
+                  onClick={() => handleModeration(listing.id, 'REJECTED')}
+                  className="px-4 py-2 bg-red-600 text-white rounded"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}`,
+                lang: "typescript"
+            },
+            "src/app/page.tsx": {
+                content: `import ListingGrid from "@/components/ListingGrid";
+import { prisma } from "@/lib/prisma";
+
+export default async function Home() {
+  const listings = await prisma.listing.findMany({
+    where: { status: 'APPROVED' },
+    include: { user: true },
+    orderBy: [
+      { isFeatured: 'desc' },
+      { createdAt: 'desc' }
+    ]
+  });
+
+  return (
+    <main className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">MaraMarket</h1>
+      <ListingGrid initialListings={listings} />
+    </main>
+  );
+}`,
+                lang: "typescript"
+            },
+            ".env.example": {
+                content: `# 1. Neon / Supabase PostgreSQL Connection URL
+DATABASE_URL="postgresql://maramarket_owner:YOUR_SECURE_PASSWORD@ep-cool-frost-12345.eu-central-1.aws.neon.tech/maramarket?sslmode=require"
+
+# 2. NextAuth Configuration & Secret
+NEXTAUTH_URL="https://maramarket.vercel.app"
+NEXTAUTH_SECRET="7f8b9a2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f506"
+
+# 3. Secure Admin Initial Seed (Zero hardcoded values in client code)
+ADMIN_INIT_EMAIL="admin@maramarket.co.ke"
+ADMIN_INIT_PASSWORD="ChangeMeToStrong123!Production"
+
+# 4. Safaricom Daraja 2.0 M-Pesa Credentials
+MPESA_ENVIRONMENT="production"
+MPESA_CONSUMER_KEY="your_safaricom_consumer_key"
+MPESA_CONSUMER_SECRET="your_safaricom_consumer_secret"
+MPESA_SHORTCODE="174379"
+MPESA_PASSKEY="bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
+
+# 5. Cloudinary CDN Storage
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME="maramarket-cdn"
+CLOUDINARY_API_KEY="948123746182341"
+CLOUDINARY_API_SECRET="your_cloudinary_secret"`,
+                lang: "bash"
+            },
+            "README.md": {
+                content: `# MaraMarket - Production Full-Stack Architecture
+
+A secure campus marketplace, housing, and services platform built with Next.js 14, PostgreSQL, Prisma, and Safaricom M-Pesa Daraja 2.0.
+
+## Prerequisites
+- Node.js 18+ and pnpm
+- PostgreSQL database (Neon or Supabase recommended)
+- Safaricom Daraja API credentials
+- Cloudinary account for image hosting
+
+## Setup Instructions
+
+1. **Clone and install dependencies:**
+   \`\`\`bash
+   pnpm install
+   \`\`\`
+
+2. **Set up environment variables:**
+   Copy \`.env.example\` to \`.env\` and fill in your credentials.
+
+3. **Initialize the database:**
+   \`\`\`bash
+   pnpm db:migrate
+   pnpm db:seed
+   \`\`\`
+
+4. **Run development server:**
+   \`\`\`bash
+   pnpm dev
+   \`\`\`
+
+## Architecture Overview
+
+### Security
+- **Authentication:** NextAuth.js with Credentials Provider. Passwords are hashed using bcryptjs.
+- **Authorization:** Role-Based Access Control (RBAC) enforced at two levels:
+  1. **Middleware Level:** \`src/middleware.ts\` blocks access to \`/admin\` routes for non-admins.
+  2. **API Level:** Server-side session checks verify \`session.user.role === 'ADMIN'\` on all mutation endpoints.
+- **Database:** Prisma ORM ensures type-safe database access. Schemas define strict relationships and enums.
+
+### Features
+- User authentication and profiles
+- Listings CRUD (Marketplace, Housing, Services)
+- Image uploads via Cloudinary CDN
+- Search and filtering (Server-side)
+- Moderation queue (Pending/Approve/Reject)
+- User reporting system
+- M-Pesa Daraja STK Push for featured listings
+- Admin audit logs
+
+### Folder Structure
+- \`src/app\`: Next.js App Router pages and API routes
+- \`src/lib\`: Shared utilities (auth, prisma client)
+- \`src/components\`: React components
+- \`prisma\`: Database schema and seed scripts
+- \`src/middleware.ts\`: Route protection logic`,
+                lang: "markdown"
+            }
+        };
+
+        let currentActiveCodeKey = "package.json";
+
+        // Initializer
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            renderFileExplorer();
+            renderListings();
+            renderAdminData();
+            loadCodeFile('package.json');
+            updateUserRoleUI();
+        });
+
+        function renderFileExplorer() {
+            const container = document.getElementById('file-explorer');
+            let html = '<div class="text-slate-400 font-semibold px-2 py-1 flex items-center gap-1.5"><i data-lucide="folder-open" class="w-3.5 h-3.5 text-brand-400"></i> maramarket-production/</div>';
+            html += '<div class="pl-4 space-y-1">';
+            
+            Object.keys(CODE_REPOSITORY).forEach(file => {
+                const isActive = file === currentActiveCodeKey;
+                html += `
+                    <button onclick="loadCodeFile('${file}')" class="w-full text-left px-2 py-1.5 rounded hover:bg-slate-800 flex items-center gap-2 transition-colors ${isActive ? 'bg-slate-800/70 text-brand-400' : 'text-slate-300'}">
+                        <i data-lucide="file-code" class="w-3.5 h-3.5 text-cyan-400"></i> <span>${file}</span>
+                    </button>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        // Navigation switcher
+        function switchView(viewName) {
+            const views = ['app', 'admin', 'code', 'deploy'];
+            views.forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                const tab = document.getElementById(`tab-${v}`);
+                if (v === viewName) {
+                    el.classList.remove('hidden');
+                    tab.className = "px-3 py-1.5 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm flex items-center gap-1.5";
+                } else {
+                    el.classList.add('hidden');
+                    tab.className = "px-3 py-1.5 rounded-lg font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 flex items-center gap-1.5";
+                }
+            });
+            lucide.createIcons();
+            if (viewName === 'admin') checkAdminGuard();
+            if (viewName === 'code') renderFileExplorer();
+        }
+
+        function switchAdminSubTab(tabName) {
+            const tabs = ['moderation', 'reports', 'users', 'mpesa'];
+            tabs.forEach(t => {
+                const sec = document.getElementById(`adm-sec-${t}`);
+                const tabBtn = document.getElementById(`adm-tab-${t}`);
+                if (t === tabName) {
+                    sec.classList.remove('hidden');
+                    tabBtn.className = "pb-3 text-brand-400 border-b-2 border-brand-500 flex items-center gap-2 font-semibold";
+                } else {
+                    sec.classList.add('hidden');
+                    tabBtn.className = "pb-3 text-slate-400 hover:text-slate-200 flex items-center gap-2";
+                }
+            });
+            lucide.createIcons();
+        }
+
+        function toggleUserRoleDropdown() {
+            document.getElementById('role-dropdown').classList.toggle('hidden');
+        }
+
+        function setUserRole(role) {
+            document.getElementById('role-dropdown').classList.add('hidden');
+            if (role === 'ADMIN') {
+                STATE.currentUser = { id: "usr_admin_01", name: "Admin Kelvin", email: "admin@maramarket.co.ke", role: "ADMIN", isVerifiedStudent: true, phone: "+254712345678" };
+                showToast("Switched to Super Admin (Server-verified Role)", "success");
+            } else if (role === 'SELLER') {
+                STATE.currentUser = { id: "usr_student_02", name: "Brian Ochieng", email: "brian.o@mmarau.ac.ke", role: "USER", isVerifiedStudent: true, phone: "+254798112233" };
+                showToast("Switched to Student Seller session", "info");
+            } else {
+                STATE.currentUser = null;
+                showToast("Switched to Unauthenticated Guest", "info");
+            }
+            updateUserRoleUI();
+            checkAdminGuard();
+            renderListings();
+        }
+
+        function updateUserRoleUI() {
+            const nameEl = document.getElementById('user-display-name');
+            const roleBadgeEl = document.getElementById('user-role-badge');
+            const avatarEl = document.getElementById('user-avatar');
+
+            if (!STATE.currentUser) {
+                nameEl.textContent = "Guest Visitor";
+                roleBadgeEl.textContent = "ROLE: UNAUTHENTICATED";
+                roleBadgeEl.className = "text-[10px] text-slate-400 font-mono";
+                avatarEl.textContent = "GU";
+                avatarEl.className = "w-6 h-6 rounded-lg bg-slate-700 flex items-center justify-center font-bold text-white text-[10px]";
+            } else if (STATE.currentUser.role === 'ADMIN') {
+                nameEl.textContent = STATE.currentUser.name;
+                roleBadgeEl.textContent = "ROLE: ADMIN (OWNER)";
+                roleBadgeEl.className = "text-[10px] text-amber-400 font-mono";
+                avatarEl.textContent = "AD";
+                avatarEl.className = "w-6 h-6 rounded-lg bg-amber-600 flex items-center justify-center font-bold text-white text-[10px]";
+            } else {
+                nameEl.textContent = STATE.currentUser.name;
+                roleBadgeEl.textContent = "ROLE: STUDENT (VERIFIED)";
+                roleBadgeEl.className = "text-[10px] text-emerald-400 font-mono";
+                avatarEl.textContent = "BO";
+                avatarEl.className = "w-6 h-6 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-white text-[10px]";
+            }
+
+            const myCount = STATE.currentUser ? STATE.listings.filter(l => l.userId === STATE.currentUser.id).length : 0;
+            document.getElementById('user-listing-count').textContent = myCount;
+        }
+
+        function checkAdminGuard() {
+            const warningEl = document.getElementById('admin-access-warning');
+            const contentEl = document.getElementById('admin-content-wrapper');
+            if (!STATE.currentUser || STATE.currentUser.role !== 'ADMIN') {
+                warningEl.classList.remove('hidden');
+                contentEl.classList.add('opacity-40', 'pointer-events-none');
+            } else {
+                warningEl.classList.add('hidden');
+                contentEl.classList.remove('opacity-40', 'pointer-events-none');
+            }
+        }
+
+        function applyFilters() { renderListings(); }
+
+        function setCategoryFilter(cat) {
+            STATE.activeCategoryFilter = cat;
+            ['ALL', 'MARKETPLACE', 'HOUSING', 'SERVICES'].forEach(c => {
+                const pill = document.getElementById(`pill-${c}`);
+                if (c === cat) {
+                    pill.className = "px-3 py-1.5 rounded-lg bg-brand-600 text-white font-medium";
+                } else {
+                    pill.className = "px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium";
+                }
+            });
+            renderListings();
+        }
+
+        function renderListings() {
+            const container = document.getElementById('listings-container');
+            const searchVal = document.getElementById('filter-search')?.value.toLowerCase() || '';
+            const typeVal = document.getElementById('filter-type')?.value || 'ALL';
+            const sortVal = document.getElementById('filter-sort')?.value || 'featured';
+            const verifiedOnly = document.getElementById('filter-verified-only')?.checked || false;
+
+            let filtered = STATE.listings.filter(item => {
+                const isStatusApproved = item.status === 'APPROVED';
+                const matchesSearch = item.title.toLowerCase().includes(searchVal) || item.description.toLowerCase().includes(searchVal) || item.location.toLowerCase().includes(searchVal);
+                const matchesCat = (STATE.activeCategoryFilter === 'ALL' || item.category === STATE.activeCategoryFilter) && (typeVal === 'ALL' || item.category === typeVal);
+                const matchesVerified = !verifiedOnly || item.userVerified;
+                return isStatusApproved && matchesSearch && matchesCat && matchesVerified;
+            });
+
+            if (sortVal === 'price-asc') filtered.sort((a, b) => a.price - b.price);
+            else if (sortVal === 'price-desc') filtered.sort((a, b) => b.price - a.price);
+            else if (sortVal === 'newest') filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            else filtered.sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
+
+            document.getElementById('count-all').textContent = STATE.listings.filter(l => l.status === 'APPROVED').length;
+            document.getElementById('count-marketplace').textContent = STATE.listings.filter(l => l.category === 'MARKETPLACE' && l.status === 'APPROVED').length;
+            document.getElementById('count-housing').textContent = STATE.listings.filter(l => l.category === 'HOUSING' && l.status === 'APPROVED').length;
+            document.getElementById('count-services').textContent = STATE.listings.filter(l => l.category === 'SERVICES' && l.status === 'APPROVED').length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 p-8">
+                        <i data-lucide="package-search" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
+                        <h4 class="font-bold text-slate-300 text-base">No listings found</h4>
+                        <p class="text-xs text-slate-500 mt-1">Try broadening your search keyword or clearing active filters.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => `
+                <div class="group bg-slate-900 border ${item.isFeatured ? 'border-amber-500/50 shadow-amber-500/10' : 'border-slate-800'} rounded-2xl overflow-hidden hover:border-brand-500/50 transition-all flex flex-col shadow-xl">
+                    <div class="relative h-48 w-full overflow-hidden bg-slate-950">
+                        <img src="${item.images[0]}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase shadow-md ${item.category === 'MARKETPLACE' ? 'bg-indigo-600 text-white' : item.category === 'HOUSING' ? 'bg-amber-600 text-white' : 'bg-teal-600 text-white'}">${item.category}</span>
+                            ${item.isFeatured ? `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase shadow-md bg-amber-500 text-white flex items-center gap-1"><i data-lucide="star" class="w-2.5 h-2.5"></i> Featured</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="p-4 flex flex-col flex-1 gap-2">
+                        <div class="flex items-center justify-between text-[10px] text-slate-400">
+                            <span class="flex items-center gap-1 font-mono"><i data-lucide="map-pin" class="w-3 h-3"></i> ${item.location}</span>
+                            <span class="flex items-center gap-1 ${item.userVerified ? 'text-emerald-400' : 'text-slate-500'}"><i data-lucide="${item.userVerified ? 'badge-check' : 'help-circle'}" class="w-3 h-3"></i> ${item.userVerified ? 'Verified' : 'Unverified'}</span>
+                        </div>
+                        <h3 class="font-bold text-slate-100 text-sm leading-snug">${item.title}</h3>
+                        <p class="text-xs text-slate-400 line-clamp-2 flex-1">${item.description}</p>
+                        <div class="flex items-center justify-between pt-3 mt-auto border-t border-slate-800">
+                            <div>
+                                <p class="text-[10px] text-slate-500 uppercase font-mono">Price</p>
+                                <p class="text-lg font-extrabold text-white font-mono">KES ${item.price.toLocaleString()}</p>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <button onclick="openMpesaBoost('${item.id}')" class="px-3 py-1.5 bg-emerald-600/90 hover:bg-emerald-500 text-white text-[11px] font-semibold rounded-lg flex items-center gap-1 justify-center">
+                                    <i data-lucide="rocket" class="w-3 h-3"></i> Boost
+                                </button>
+                                <button onclick="openReportModal('${item.id}')" class="px-3 py-1.5 bg-slate-800 hover:bg-red-900/60 text-slate-300 hover:text-red-400 text-[11px] font-medium rounded-lg flex items-center gap-1 justify-center border border-slate-700">
+                                    <i data-lucide="flag" class="w-3 h-3"></i> Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderAdminData() {
+            // Moderation
+            const modBody = document.getElementById('admin-moderation-tbody');
+            const pending = STATE.listings.filter(l => l.status === 'PENDING');
+            modBody.innerHTML = pending.map(l => `
+                <tr>
+                    <td class="p-3"><div class="font-semibold text-slate-100 text-xs">${l.title}</div><div class="text-[10px] text-slate-500 truncate max-w-[200px]">${l.description}</div></td>
+                    <td class="p-3"><div class="text-slate-200 text-[11px]">${l.userName}</div><div class="text-slate-500 font-mono text-[10px]">${l.phone}</div></td>
+                    <td class="p-3"><span class="px-2 py-0.5 bg-slate-800 rounded text-[10px] font-mono">${l.category}</span></td>
+                    <td class="p-3 font-mono text-emerald-400 font-bold">KES ${l.price.toLocaleString()}</td>
+                    <td class="p-3"><span class="px-2 py-1 bg-amber-950/60 text-amber-400 border border-amber-800/50 rounded text-[10px] font-bold uppercase">${l.status}</span></td>
+                    <td class="p-3 text-right space-x-2">
+                        <button onclick="moderateListing('${l.id}', 'APPROVED')" class="px-2.5 py-1 bg-emerald-800/60 hover:bg-emerald-700 text-emerald-300 rounded text-[10px] font-medium border border-emerald-700/50">Approve</button>
+                        <button onclick="moderateListing('${l.id}', 'REJECTED')" class="px-2.5 py-1 bg-red-800/60 hover:bg-red-700 text-red-300 rounded text-[10px] font-medium border border-red-700/50">Reject</button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('adm-mod-count').textContent = pending.length;
+            document.getElementById('kpi-pending').textContent = pending.length;
+
+            // Reports
+            const repList = document.getElementById('admin-reports-list');
+            repList.innerHTML = STATE.reports.map(r => `
+                <div class="p-4 flex items-start justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-red-950/60 border border-red-800/50 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-slate-100 text-xs">Report on: ${r.listingTitle}</p>
+                            <p class="text-[10px] text-slate-400 mt-1">Filed by: ${r.reporterName} • Reason: <span class="text-red-400 font-mono">${r.reason}</span></p>
+                            <p class="text-[11px] text-slate-300 mt-2 p-2 bg-slate-950 rounded border border-slate-800">${r.details}</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <button onclick="resolveReport('${r.id}')" class="px-3 py-1 bg-slate-800 hover:bg-emerald-800/50 text-slate-300 hover:text-emerald-300 rounded text-[10px] border border-slate-700">Resolve</button>
+                        <button onclick="resolveReport('${r.id}')" class="px-3 py-1 bg-slate-800 hover:bg-red-800/50 text-slate-300 hover:text-red-300 rounded text-[10px] border border-slate-700">Dismiss</button>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('adm-rep-count').textContent = STATE.reports.length;
+            document.getElementById('kpi-reports').textContent = STATE.reports.length;
+
+            // Users
+            const usersBody = document.getElementById('admin-users-tbody');
+            usersBody.innerHTML = STATE.users.map(u => {
+                const userListingCount = STATE.listings.filter(l => l.userId === u.id).length;
+                return `
+                    <tr>
+                        <td class="p-3"><div class="font-semibold text-slate-100 text-xs">${u.name}</div><div class="text-[10px] text-slate-500">${u.email}</div></td>
+                        <td class="p-3"><span class="px-2 py-1 ${u.role === 'ADMIN' ? 'bg-amber-950/60 text-amber-400 border-amber-800/50' : 'bg-slate-800 text-slate-400 border-slate-700'} border rounded text-[10px] font-mono uppercase">${u.role}</span></td>
+                        <td class="p-3">${u.isVerified ? '<span class="text-emerald-400 flex items-center gap-1 text-[11px]"><i data-lucide="check-circle" class="w-3 h-3"></i> Verified</span>' : '<span class="text-slate-500 text-[11px]">Unverified</span>'}</td>
+                        <td class="p-3 font-mono text-slate-300">${userListingCount}</td>
+                        <td class="p-3 text-slate-400 font-mono text-[10px]">${u.createdAt}</td>
+                        <td class="p-3 text-right space-x-2">
+                            ${u.role !== 'ADMIN' ? `<button onclick="toggleUserRoleForUser('${u.id}')" class="px-2.5 py-1 bg-indigo-800/60 hover:bg-indigo-700 text-indigo-300 rounded text-[10px] border border-indigo-700/50">Make Admin</button>` : '<span class="text-amber-400 text-[10px]">Owner</span>'}
+                            <button class="px-2.5 py-1 bg-red-800/60 hover:bg-red-700 text-red-300 rounded text-[10px] border border-red-700/50">Ban</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // M-Pesa
+            const mpesaBody = document.getElementById('admin-mpesa-tbody');
+            mpesaBody.innerHTML = STATE.mpesaTransactions.map(t => `
+                <tr>
+                    <td class="p-3 text-slate-400">${t.checkoutRequestId}</td>
+                    <td class="p-3"><div class="text-slate-200">${t.userName}</div><div class="text-slate-500">${t.phone}</div></td>
+                    <td class="p-3 text-slate-300">${t.itemTitle}</td>
+                    <td class="p-3 text-emerald-400">KES ${t.amount}</td>
+                    <td class="p-3 text-cyan-400">${t.mpesaReceipt}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 bg-emerald-950/60 text-emerald-400 border border-emerald-800/50 rounded text-[10px] font-bold">${t.status}</span></td>
+                    <td class="p-3 text-slate-400">${new Date(t.createdAt).toLocaleString()}</td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function moderateListing(id, status) {
+            const listing = STATE.listings.find(l => l.id === id);
+            if (listing) {
+                listing.status = status;
+                renderAdminData();
+                renderListings();
+                showToast(`Listing ${status.toLowerCase()} successfully. Audit log updated.`, "success");
+            }
+        }
+
+        function resolveReport(id) {
+            STATE.reports = STATE.reports.filter(r => r.id !== id);
+            renderAdminData();
+            showToast("Report resolved and removed from queue.", "success");
+        }
+
+        function toggleUserRoleForUser(userId) {
+            const user = STATE.users.find(u => u.id === userId);
+            if (user) {
+                user.role = "ADMIN";
+                renderAdminData();
+                showToast(`User ${user.name} promoted to ADMIN via Prisma Update.`, "success");
+            }
+        }
+
+        function loadCodeFile(fileName) {
+            currentActiveCodeKey = fileName;
+            const fileData = CODE_REPOSITORY[fileName];
+            const contentEl = document.getElementById('code-content');
+            const filenameEl = document.getElementById('code-viewer-filename');
+
+            // Simple syntax highlighting via escaping
+            const escaped = fileData.content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            contentEl.innerHTML = escaped;
+            filenameEl.innerHTML = `<i data-lucide="file-code" class="w-4 h-4"></i> ${fileName}`;
+            renderFileExplorer();
+            lucide.createIcons();
+        }
+
+        function copyActiveCode() {
+            navigator.clipboard.writeText(CODE_REPOSITORY[currentActiveCodeKey].content);
+            const btnText = document.getElementById('copy-btn-text');
+            btnText.textContent = 'Copied!';
+            setTimeout(() => btnText.textContent = 'Copy Code', 2000);
+        }
+
+        // Modal Helpers
+        function openNewListingModal() { document.getElementById('modal-create-listing').classList.remove('hidden'); }
+        function openMyListingsModal() {
+            if (!STATE.currentUser) {
+                showToast("Please log in to view your listings.", "error");
+                return;
+            }
+            const listEl = document.getElementById('my-listings-list');
+            const myListings = STATE.listings.filter(l => l.userId === STATE.currentUser.id);
+            if (myListings.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">You haven't posted any listings yet.</div>`;
+            } else {
+                listEl.innerHTML = myListings.map(l => `
+                    <div class="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <img src="${l.images[0]}" class="w-12 h-12 rounded-lg object-cover">
+                            <div>
+                                <p class="font-semibold text-slate-100 text-sm">${l.title}</p>
+                                <p class="text-[10px] text-slate-400 font-mono">KES ${l.price} • ${l.category} • <span class="${l.status === 'APPROVED' ? 'text-emerald-400' : l.status === 'PENDING' ? 'text-amber-400' : 'text-red-400'}">${l.status}</span></p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg border border-slate-700">Edit</button>
+                            <button onclick="deleteListing('${l.id}')" class="px-3 py-1.5 bg-red-900/40 hover:bg-red-800/60 text-red-300 text-xs rounded-lg border border-red-800/50">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('modal-my-listings').classList.remove('hidden');
+        }
+
+        function deleteListing(id) {
+            STATE.listings = STATE.listings.filter(l => l.id !== id);
+            renderListings();
+            updateUserRoleUI();
+            openMyListingsModal(); // Refresh modal
+            showToast("Listing deleted from database.", "success");
+        }
+
+        function openMpesaBoost(listingId) {
+            STATE.activeTargetListingForMpesa = listingId;
+            const listing = STATE.listings.find(l => l.id === listingId);
+            document.getElementById('mpesa-target-title').textContent = listing?.title || 'Unknown';
+            document.getElementById('mpesa-input-stage').classList.remove('hidden');
+            document.getElementById('mpesa-processing-stage').classList.add('hidden');
+            document.getElementById('mpesa-success-stage').classList.add('hidden');
+            document.getElementById('modal-mpesa-boost').classList.remove('hidden');
+        }
+
+        function triggerDarajaSTKPush() {
+            const phone = document.getElementById('mpesa-phone').value;
+            document.getElementById('mpesa-input-stage').classList.add('hidden');
+            document.getElementById('mpesa-processing-stage').classList.remove('hidden');
+            document.getElementById('mpesa-phone-display').textContent = `+254${phone}`;
+
+            setTimeout(() => {
+                document.getElementById('mpesa-processing-stage').classList.add('hidden');
+                document.getElementById('mpesa-success-stage').classList.remove('hidden');
+                
+                const listing = STATE.listings.find(l => l.id === STATE.activeTargetListingForMpesa);
+                if (listing) {
+                    listing.isFeatured = true;
+                    const receipt = "MPESA" + Math.random().toString(36).substring(2, 10).toUpperCase();
+                    document.getElementById('mpesa-receipt-code').textContent = receipt;
+                    
+                    STATE.mpesaTransactions.unshift({
+                        id: "tx_" + Math.random().toString(36).substring(2, 8),
+                        checkoutRequestId: "ws_CO_" + Date.now(),
+                        phone: `+254${phone}`,
+                        userName: STATE.currentUser?.name || "Unknown",
+                        itemTitle: listing.title,
+                        amount: 100,
+                        mpesaReceipt: receipt,
+                        status: "COMPLETED",
+                        createdAt: new Date().toISOString()
+                    });
+                    renderAdminData();
+                    renderListings();
+                }
+            }, 3000);
+        }
+
+        function openReportModal(listingId) {
+            STATE.activeTargetListingForReport = listingId;
+            const listing = STATE.listings.find(l => l.id === listingId);
+            document.getElementById('report-item-title').textContent = listing?.title || 'Unknown';
+            document.getElementById('modal-report').classList.remove('hidden');
+        }
+
+        function handleSubmitReport(e) {
+            e.preventDefault();
+            const reason = document.getElementById('report-reason').value;
+            const details = document.getElementById('report-details').value;
+            const listing = STATE.listings.find(l => l.id === STATE.activeTargetListingForReport);
+            
+            STATE.reports.push({
+                id: "rep_" + Math.random().toString(36).substring(2, 8),
+                listingId: STATE.activeTargetListingForReport,
+                listingTitle: listing?.title || "Unknown",
+                reporterName: STATE.currentUser?.name || "Guest",
+                reason,
+                details,
+                status: "OPEN",
+                createdAt: new Date().toISOString()
+            });
+            
+            renderAdminData();
+            closeModal('modal-report');
+            showToast("Report submitted to admin queue.", "success");
+            document.getElementById('report-details').value = '';
+        }
+
+        function handleCreateListing(e) {
+            e.preventDefault();
+            if (!STATE.currentUser) {
+                showToast("Please log in to create listings.", "error");
+                return;
+            }
+            const newListing = {
+                id: "lst_" + Math.random().toString(36).substring(2, 8),
+                title: document.getElementById('new-title').value,
+                description: document.getElementById('new-desc').value,
+                price: parseFloat(document.getElementById('new-price').value),
+                category: document.getElementById('new-category').value,
+                location: document.getElementById('new-location').value,
+                status: "PENDING", // New listings require moderation
+                isFeatured: false,
+                images: ["https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=60"],
+                userId: STATE.currentUser.id,
+                userName: STATE.currentUser.name,
+                userVerified: STATE.currentUser.isVerifiedStudent,
+                phone: STATE.currentUser.phone,
+                createdAt: new Date().toISOString()
+            };
+            
+            STATE.listings.unshift(newListing);
+            closeModal('modal-create-listing');
+            renderListings();
+            renderAdminData();
+            updateUserRoleUI();
+            showToast("Listing created! Awaiting admin moderation.", "success");
+            e.target.reset();
+        }
+
+        function simulateImageSelect() {
+            const statusEl = document.getElementById('upload-status-text');
+            statusEl.textContent = "Image attached securely (Cloudinary URI generated)";
+            statusEl.classList.remove('text-slate-300');
+            statusEl.classList.add('text-emerald-400');
+        }
+
+        function seedDatabaseDemo() {
+            location.reload();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const colors = {
+                success: 'bg-emerald-600 border-emerald-500',
+                error: 'bg-red-600 border-red-500',
+                info: 'bg-slate-700 border-slate-600'
+            };
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl text-white text-sm font-medium border shadow-2xl ${colors[type]} flex items-center gap-2 transform translate-y-4 opacity-0 transition-all duration-300`;
+            toast.innerHTML = `<span>${msg}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 10);
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-4', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Close dropdown on outside click
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('role-dropdown');
+            const btn = document.getElementById('user-menu-btn');
+            if (!dropdown.contains(e.target) && !btn.contains(e.target) && !dropdown.classList.contains('hidden')) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
